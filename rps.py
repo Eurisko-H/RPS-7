@@ -1,6 +1,18 @@
 import random
 import os
 import json
+import cli_box
+from colorama import Fore, Back, init
+from rich.console import Console
+from rich.theme import Theme
+from rich.table import Table
+
+custom_theme = Theme({'success': 'green', 'error': 'bold red',
+                      'others': 'blue underline', 'tie': 'magenta', 'lose': 'purple', 'win': 'orange3'})
+
+console = Console(theme=custom_theme)
+
+init()
 
 
 class RPS:
@@ -10,12 +22,12 @@ class RPS:
         self.round = rounds
         self.wins = {player_1: 0, player_2: 0}
         self.rolls = {}
-
         self.load_rolls()
         self.show_leaderboard()
-        print("---------------------------")
-        print(" Rock Paper Scissors")
-        print("---------------------------")
+
+    @staticmethod
+    def clear_screen():
+        os.system('cls' if os.name == 'nt' else 'clear')
 
     def load_rolls(self):
         directory = os.path.dirname(__file__)
@@ -36,13 +48,20 @@ class RPS:
             return json.load(fin)
 
     def show_leaderboard(self):
+        print('')
+        table = Table(title="LeaderBoard")
+        table.add_column("Name", justify="right", style="cyan", no_wrap=True)
+        table.add_column("Number Of Wins", style="magenta")
+
         leaders = self.load_leaders()
 
         sorted_leaders = [*leaders.items()]
         sorted_leaders.sort(key=lambda l: l[1], reverse=True)
 
         for name, wins in sorted_leaders:
-            print(f"{name} wins:{wins}")
+            table.add_row(f"{name}", f"{wins}")
+
+        console.print(table, style="dark_goldenrod")
 
     def record_wins(self, winner):
         leaders = self.load_leaders()
@@ -55,30 +74,28 @@ class RPS:
         directory = os.path.dirname(__file__)
         file_name = os.path.join(directory, 'leaderboard.json')
 
-        with open (file_name, 'w', encoding='utf-8') as fin:
-            json.dump(leaders, fin)
+        with open(file_name, 'w', encoding='utf-8') as fout:
+            json.dump(leaders, fout)
 
     def get_roll(self):
-        print("Available rolls")
+        console.print("Available rolls", style='others')
         for index, roll in enumerate(self.rolls.keys(), start=1):
-            print(f"{index}. {roll}")
+            print(cli_box.rounded(f"{index}. {roll}"))
 
-        answer = input(f"{self.player_1}, what is your roll? ")
+        answer = input(f"{Fore.BLUE}{self.player_1}, {Fore.GREEN}what is your roll? ")
         if not answer.isdigit():
-            print(f"Sorry {self.player_1}, {answer} is not a digit!")
+            console.print(f"Sorry {self.player_1}, {answer} is not a digit!", style='error')
             return None
 
         selected_index = int(answer) - 1
         if selected_index < 0 or selected_index >= len(self.rolls.keys()):
-            print(f"Sorry {self.player_1}, {answer} is out of bound!")
+            console.print(f"Sorry {self.player_1}, {answer} is out of bound!", style='error')
             return None
 
         return [key for key in self.rolls.keys()][selected_index]
 
     def check_for_winner(self, roll1, roll2):
         winner = None
-        if roll1 == roll2:
-            print("The play was tied!")
 
         outcome = self.rolls.get(roll1, {})
         if roll2 in outcome.get("defeats"):
@@ -101,31 +118,28 @@ class RPS:
             roll2 = random.choice([*self.rolls.keys()])
 
             if roll1 is None:
-                print("Try again!")
+                console.print("Try again!", style='others')
                 continue
 
-            print(f"{self.player_1} roll {roll1}")
-            print(f"{self.player_2} rolls {roll2}")
+            self.clear_screen()
+            print(cli_box.rounded(f"{Fore.LIGHTBLUE_EX}{self.player_1} roll {roll1}\n"
+                                  f"{Fore.LIGHTCYAN_EX}{self.player_2} rolls {roll2}"))
 
             winner = self.check_for_winner(roll1, roll2)
 
             if winner is None:
-                print("This round was a Tie!")
+                console.print("This round was a Tie!", style='tie')
             else:
-                print(f"{winner} take the round!")
+                console.print(f"{winner} take the round!", style='win')
                 if winner == self.player_1:
                     self.wins[winner] += 1
                 elif winner == self.player_2:
                     self.wins[winner] += 1
 
-            print(f"Score is {self.player_1}: {self.wins[self.player_1]}"
-                  f" and {self.player_2}: {self.wins[self.player_2]}.")
+            console.print(f"Score>> {self.player_1}: {self.wins[self.player_1]}"
+                          f" - {self.player_2}: {self.wins[self.player_2]}.", style='slate_blue1 underline')
             print()
 
         overall_winner = self.find_winner()
-        print(f"{overall_winner} wins the game!")
+        console.print(f"{overall_winner} wins the game!", style='win')
         self.record_wins(overall_winner)
-
-
-rps = RPS("hasan", "CPU", 3)
-rps.play_game()
