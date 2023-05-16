@@ -1,4 +1,6 @@
 import random
+import os
+import json
 
 
 class RPS:
@@ -7,15 +9,54 @@ class RPS:
         self.player_2 = player_2
         self.round = rounds
         self.wins = {player_1: 0, player_2: 0}
-        self.rolls = {
-            "rock": {"defeats": ["scissors"], "defeated_by": ["paper"]},
-            "paper": {"defeats": ["rock"], "defeated_by": ["scissors"]},
-            "scissors": {"defeats": ["paper"], "defeated_by": ["rock"]},
-        }
+        self.rolls = {}
 
+        self.load_rolls()
+        self.show_leaderboard()
         print("---------------------------")
         print(" Rock Paper Scissors")
         print("---------------------------")
+
+    def load_rolls(self):
+        directory = os.path.dirname(__file__)
+        file_name = os.path.join(directory, 'rolls.json')
+
+        with open(file_name, 'r', encoding='utf-8') as fin:
+            self.rolls = json.load(fin)
+
+    @staticmethod
+    def load_leaders():
+        directory = os.path.dirname(__file__)
+        file_name = os.path.join(directory, 'leaderboard.json')
+
+        if not os.path.exists(file_name):
+            return {}
+
+        with open(file_name, 'r', encoding='utf-8') as fin:
+            return json.load(fin)
+
+    def show_leaderboard(self):
+        leaders = self.load_leaders()
+
+        sorted_leaders = [*leaders.items()]
+        sorted_leaders.sort(key=lambda l: l[1], reverse=True)
+
+        for name, wins in sorted_leaders:
+            print(f"{name} wins:{wins}")
+
+    def record_wins(self, winner):
+        leaders = self.load_leaders()
+
+        if winner in leaders:
+            leaders[winner] += 1
+        else:
+            leaders[winner] = 1
+
+        directory = os.path.dirname(__file__)
+        file_name = os.path.join(directory, 'leaderboard.json')
+
+        with open (file_name, 'w', encoding='utf-8') as fin:
+            json.dump(leaders, fin)
 
     def get_roll(self):
         print("Available rolls")
@@ -83,6 +124,7 @@ class RPS:
 
         overall_winner = self.find_winner()
         print(f"{overall_winner} wins the game!")
+        self.record_wins(overall_winner)
 
 
 rps = RPS("hasan", "CPU", 3)
