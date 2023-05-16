@@ -1,4 +1,5 @@
 import random
+import datetime
 import os
 import json
 import cli_box
@@ -29,12 +30,24 @@ class RPS:
     def clear_screen():
         os.system('cls' if os.name == 'nt' else 'clear')
 
+    @staticmethod
+    def log(msg):
+        directory = os.path.dirname(__file__)
+        filename = os.path.join(directory, 'rps.log')
+
+        with open(filename, 'a', encoding='utf-8') as fout:
+            fout.write(f"[{datetime.datetime.now().date().isoformat()}] ")
+            fout.write(msg)
+            fout.write('\n')
+
     def load_rolls(self):
         directory = os.path.dirname(__file__)
         file_name = os.path.join(directory, 'rolls.json')
 
         with open(file_name, 'r', encoding='utf-8') as fin:
             self.rolls = json.load(fin)
+
+        self.log(f"Loaded rolls: {list(self.rolls.keys())} from {os.path.basename(file_name)}.")
 
     @staticmethod
     def load_leaders():
@@ -80,7 +93,7 @@ class RPS:
     def get_roll(self):
         console.print("Available rolls", style='others')
         for index, roll in enumerate(self.rolls.keys(), start=1):
-            print(cli_box.rounded(f"{index}. {roll}"))
+            print(f"{index}. {roll}")
 
         answer = input(f"{Fore.BLUE}{self.player_1}, {Fore.GREEN}what is your roll? ")
         if not answer.isdigit():
@@ -113,6 +126,7 @@ class RPS:
         return None
 
     def play_game(self):
+        self.log(f"New game starting between {self.player_1} and {self.player_2}.")
         while not self.find_winner():
             roll1 = self.get_roll()
             roll2 = random.choice([*self.rolls.keys()])
@@ -122,24 +136,33 @@ class RPS:
                 continue
 
             self.clear_screen()
+            self.log(f"Round: {self.player_1} roll {roll1} and {self.player_2} rolls {roll2}")
             print(cli_box.rounded(f"{Fore.LIGHTBLUE_EX}{self.player_1} roll {roll1}\n"
                                   f"{Fore.LIGHTCYAN_EX}{self.player_2} rolls {roll2}"))
 
             winner = self.check_for_winner(roll1, roll2)
 
             if winner is None:
-                console.print("This round was a Tie!", style='tie')
+                msg = "This round was a Tie!"
+                console.print(msg, style='tie')
+                self.log(msg)
             else:
-                console.print(f"{winner} take the round!", style='win')
+                msg = f"{winner} take the round!"
+                console.print(msg, style='win')
+                self.log(msg)
                 if winner == self.player_1:
                     self.wins[winner] += 1
                 elif winner == self.player_2:
                     self.wins[winner] += 1
 
-            console.print(f"Score>> {self.player_1}: {self.wins[self.player_1]}"
-                          f" - {self.player_2}: {self.wins[self.player_2]}.", style='slate_blue1 underline')
+            msg = f"Score>> {self.player_1}: {self.wins[self.player_1]} - " \
+                  f"{self.player_2}: {self.wins[self.player_2]}."
+            console.print(msg, style='slate_blue1 underline')
+            self.log(msg)
             print()
 
         overall_winner = self.find_winner()
-        console.print(f"{overall_winner} wins the game!", style='win')
+        msg = f"{overall_winner} wins the game!"
+        console.print(msg, style='win')
+        self.log(msg)
         self.record_wins(overall_winner)
