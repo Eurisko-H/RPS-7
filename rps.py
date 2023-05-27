@@ -22,7 +22,7 @@ class RPS:
         self.player_2 = player_2
         self.round = rounds
         self.wins = {player_1: 0, player_2: 0}
-        self.rolls = {}
+        self.rolls = {} # type: ignore
         self.load_rolls()
         self.show_leaderboard()
 
